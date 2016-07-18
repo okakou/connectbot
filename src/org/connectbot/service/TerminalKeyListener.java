@@ -133,6 +133,33 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			final boolean controlNumbersAreFKeys = controlNumbersAreFKeysOnSoftKeyboard &&
 					!interpretAsHardKeyboard;
 
+			//Ctrl
+			if (keyCode == 113 || keyCode == 114) {
+				if (event.getAction() == KeyEvent.ACTION_UP) {
+					ourMetaState &= ~OUR_CTRL_ON;
+					bridge.redraw();
+					return true;
+				} else if (event.getAction() == KeyEvent.ACTION_DOWN) {
+					//disable ctrl_lock
+					if ((ourMetaState & OUR_CTRL_ON) == 0) {
+						metaPress(OUR_CTRL_ON);
+					}
+					return true;
+				}
+			}
+
+			if ((ourMetaState & OUR_CTRL_MASK) != 0) {
+				if (event.getAction() == KeyEvent.ACTION_DOWN) {
+					int k = event.getUnicodeChar(0);
+					int oldK = k;
+					k = keyAsControl(k);
+					if (k != oldK) {
+						bridge.transport.write(k);
+					}
+					return true;
+				}
+			}
+
 			// Ignore all key-up events except for the special keys
 			if (event.getAction() == KeyEvent.ACTION_UP) {
 				if (rightModifiersAreSlashAndTab) {
@@ -303,6 +330,33 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			if (mDeadKey != 0) {
 				uchar = KeyCharacterMap.getDeadChar(mDeadKey, keyCode);
 				mDeadKey = 0;
+			}
+
+			//Escape
+			//if (keyCode == 208 || keyCode == 204) {
+			//	sendEscape();
+			//	return true;
+			//}
+
+			//Shift+Number
+			if (8 <= keyCode && keyCode <= 16) {
+				final char[] _keyMap = new char[]{ '!', '"', '#', '$', '%', '&', '\'', '(', ')' };
+				if ((ourMetaState & OUR_SHIFT_ON ) != 0) {
+					bridge.transport.write(_keyMap[keyCode-8]);
+					metaPress(OUR_SHIFT_ON);
+					metaPress(OUR_SHIFT_ON);
+				} else {
+					bridge.transport.write(uchar);
+				}
+				return true;
+			}
+
+			//back
+			if (keyCode == 4) {
+				if ((ourMetaState & OUR_SHIFT_ON) == 0) {
+					sendEscape();
+					return true;
+				}
 			}
 
 			// If we have a defined non-control character
